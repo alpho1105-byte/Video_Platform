@@ -99,3 +99,17 @@ func TestLRUEvictsTheLeastRecentlyUsedAndSkipsHugeObjects(t *testing.T) {
 		t.Fatal("the recently used object was evicted")
 	}
 }
+
+// serve 第一次查快取沒命中之後，上一個拉取可能剛好完成並移除 inflight：join 必須再查一次快取，不能再拉一次。
+func TestJoinSeesAFetchThatFinishedAfterTheFirstLookup(t *testing.T) {
+	var hits atomic.Int64
+	e := New(Config{Region: "tw", Capacity: 1 << 20}, origin(t, &hits).URL)
+	e.cache.put("vod/v1/seg.seg", item{body: []byte("cached"), contentType: "video/mp2t"})
+	f, leader, it, cached := e.join("vod/v1/seg.seg")
+	if !cached || leader || f != nil || string(it.body) != "cached" {
+		t.Fatalf("join = %v %v %v %q", f, leader, cached, it.body)
+	}
+	if _, ok := e.inflight["vod/v1/seg.seg"]; ok {
+		t.Fatal("join started a fetch for an object that is already cached")
+	}
+}

@@ -83,8 +83,13 @@ func (e *Edge) serve(w http.ResponseWriter, r *http.Request) {
 		e.write(w, it.body, it.contentType, "HIT")
 		return
 	}
+	f, leader, it, cached := e.join(key)
+	if cached {
+		e.stats.Hits.Add(1)
+		e.write(w, it.body, it.contentType, "HIT")
+		return
+	}
 	e.stats.Misses.Add(1)
-	f, leader := e.join(key)
 	if leader {
 		e.fill(r.Context(), key, f)
 	} else {
@@ -109,15 +114,22 @@ func (e *Edge) write(w http.ResponseWriter, body []byte, contentType, cacheStatu
 }
 
 // join 回傳這個 key 正在進行的拉取；沒有的話建立一個，呼叫者負責執行。
-func (e *Edge) join(key string) (*fetch, bool) {
+//
+// 持有 e.mu 時要再查一次快取：在 serve 第一次查快取之後，上一個拉取可能剛好完成。
+// fill 先放進快取、才在 e.mu 底下移除 inflight，所以這裡看不到 inflight 時，完成的拉取一定已經在快取裡；
+// 少了這次檢查，同一個物件會被多拉一次。
+func (e *Edge) join(key string) (f *fetch, leader bool, it item, cached bool) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if f, ok := e.inflight[key]; ok {
-		return f, false
+		return f, false, item{}, false
 	}
-	f := &fetch{done: make(chan struct{})}
+	if it, ok := e.cache.get(key); ok {
+		return nil, false, it, true
+	}
+	f = &fetch{done: make(chan struct{})}
 	e.inflight[key] = f
-	return f, true
+	return f, true, item{}, false
 }
 
 func (e *Edge) fill(ctx context.Context, key string, f *fetch) {

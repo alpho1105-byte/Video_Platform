@@ -77,7 +77,7 @@ func (s *sim) watch(ctx context.Context, n int) error {
 			v.video = s.choose(choice)
 			next := 0
 			v.pb, v.err = client.Play(ctx, client.PlayerConfig{API: client.NewAPI(s.api(), ""), CDN: v.region.url,
-				Link: client.NewLink(v.region.rtt, bandwidth), ABR: v.abr, MaxBuffer: 10 * time.Second, LowBuffer: 2 * time.Second, Safety: 0.8,
+				Link: client.NewLink(v.region.rtt, bandwidth), ABR: v.abr, MaxBuffer: 10 * time.Second, LowBuffer: time.Second, Safety: 0.8,
 				OnSegment: func(_ string, frames []media.EncodedFrame) {
 					for _, f := range frames {
 						if int(f.Index) != next || f.SourceDigest != v.video.digests[f.Index] {

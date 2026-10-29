@@ -23,6 +23,8 @@ type PlayerConfig struct {
 	// MaxBuffer：緩衝超過這麼多就先不下載。
 	MaxBuffer time.Duration
 	// LowBuffer：緩衝低於這個值時，不管頻寬估計多少都往下切一級。
+	// 要小於一段的長度：剛下載完第一段時緩衝就只有一段，門檻若等於一段，
+	// 第二段會不會被強制降級就取決於時鐘解析度（兩次 time.Now 之間有沒有前進）。
 	LowBuffer time.Duration
 	// Safety：只選 BANDWIDTH 不超過「估計頻寬 × Safety」的畫質，保留餘裕給頻寬波動。
 	Safety float64

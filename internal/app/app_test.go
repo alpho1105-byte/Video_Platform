@@ -121,7 +121,7 @@ func TestUploadResumeProcessAndPlay(t *testing.T) {
 	for _, abr := range []bool{true, false} {
 		next := 0
 		pb, err := client.Play(r.ctx, client.PlayerConfig{API: client.NewAPI(r.api, ""), CDN: r.cdn, ABR: abr,
-			Link: client.NewLink(0, func(time.Duration) int { return 50_000_000 }), MaxBuffer: 10 * time.Second, LowBuffer: 4 * time.Second, Safety: 0.8,
+			Link: client.NewLink(0, func(time.Duration) int { return 50_000_000 }), MaxBuffer: 10 * time.Second, LowBuffer: time.Second, Safety: 0.8,
 			OnSegment: func(_ string, frames []media.EncodedFrame) {
 				for _, f := range frames {
 					if int(f.Index) != next || f.SourceDigest != digests[f.Index] {
